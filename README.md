@@ -1,4 +1,3 @@
-jalsarraf@amarillo:~/git/ezsftp$ cat README.md 
 
 # 📦 Chroot-SFTP User Manager v1.5
 
@@ -27,7 +26,7 @@ Provision and manage **chrooted SFTP-only users** with ease. This script support
 ## 📖 Usage
 
 ```bash
-./manage_sftp_chroot_user.sh [OPTIONS]
+./ezsftp.sh [OPTIONS]
 ```
 
 ### Options
@@ -92,7 +91,7 @@ Q) Quit
 1. Run the script:
 
 ```bash
-./manage_sftp_chroot_user.sh
+./ezsftp.sh
 ```
 
 2. From the menu, select:
@@ -110,7 +109,7 @@ Q) Quit
 1. Run the script:
 
 ```bash
-./manage_sftp_chroot_user.sh
+./ezsftp.sh
 ```
 
 2. From the menu, select:
@@ -129,7 +128,7 @@ Q) Quit
 |--------|----------------|
 | 🟢 Green  | LIVE mode      |
 | 🟡 Yellow | DRY-RUN mode   |
-| 🔴 Red    | Errors/Issues |
+| 🔴 Red    | Errors/Issues  |
 
 ---
 
