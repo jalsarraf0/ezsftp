@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================
-#  manage_sftp_chroot_user.sh – v1.5
+#  By: Jamal Al-Sarraf
 #  Provision or revoke chrooted SFTP users with DRY-RUN support
 # ==============================================================
 set -Eeuo pipefail
