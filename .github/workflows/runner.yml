@@ -1,0 +1,153 @@
+# File: .github/workflows/runner.yml
+name: Universal CI / CD
+
+on:
+  push:
+    branches: [ main, master, trunk ]
+    tags:     [ 'v*' ]          # semantic-version tags create releases
+  pull_request:                 # CI for feature branches
+  workflow_dispatch:            # Manual trigger
+  schedule:
+    - cron: '0 2 * * *'         # nightly at 02:00 UTC
+
+# Abort in-flight duplicate runs on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-deploy:
+    name: Build ▸ Test ▸ (Publish) ▸ (Deploy)
+    runs-on: ubuntu-latest       # resolves to Ubuntu 24.04 May 2025+
+    env:
+      AWS_REGION: us-east-1      # adjust as needed
+    steps:
+
+    # -- COMMON ---------------------------------------------------
+    - name: Checkout source
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0           # full history for changelogs / versioning
+
+    - name: Set up caching (general)
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache
+          **/node_modules
+          ~/.npm
+          ~/.m2               # Maven
+          ~/.cache/pip        # pip
+          ~/.cache/go-build
+        key: ${{ runner.os }}-${{ hashFiles('**/lockfiles', '**/go.sum', '**/requirements.txt') }}
+        restore-keys: ${{ runner.os }}-
+
+    # -- NodeJS (if package.json) ---------------------------------
+    - name: Set up Node
+      if: hashFiles('**/package.json') != ''
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install Node dependencies
+      if: hashFiles('**/package.json') != ''
+      run: npm ci --ignore-scripts
+
+    - name: Node tests
+      if: hashFiles('**/package.json') != ''
+      run: npm test --if-present
+
+    # -- Python (if requirements.txt | pyproject.toml) ------------
+    - name: Set up Python
+      if: |
+        hashFiles('**/requirements.txt') != '' ||
+        hashFiles('**/pyproject.toml')   != ''
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install Python deps
+      if: |
+        hashFiles('**/requirements.txt') != '' ||
+        hashFiles('**/pyproject.toml')   != ''
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f pyproject.toml ]; then pip install .; fi
+
+    - name: Python tests
+      if: hashFiles('**/pytest.ini') != '' || hashFiles('**/tests/**.py') != ''
+      run: pytest -q
+
+    # -- Go (if go.mod) -------------------------------------------
+    - name: Set up Go
+      if: hashFiles('**/go.mod') != ''
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+
+    - name: Go tests
+      if: hashFiles('**/go.mod') != ''
+      run: go test ./...
+
+    # -- Generic scripts (build.sh / test.sh) ---------------------
+    - name: Custom build script
+      if: hashFiles('build.sh') != ''
+      run: bash ./build.sh
+
+    - name: Custom test script
+      if: hashFiles('test.sh') != ''
+      run: bash ./test.sh
+
+    # -- Docker (if Dockerfile) -----------------------------------
+    - name: Set up Docker Buildx
+      if: hashFiles('Dockerfile') != ''
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GHCR
+      if: hashFiles('Dockerfile') != ''
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build & push image
+      if: hashFiles('Dockerfile') != ''
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ghcr.io/${{ github.repository }}:latest
+
+    # -- Deploy (main branch only, if deploy.sh exists) -----------
+    - name: Deploy to AWS / K8s / etc.
+      if: ${{ github.ref == 'refs/heads/main' && hashFiles('deploy.sh') != '' }}
+      run: bash ./deploy.sh
+      env:
+        AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION:            ${{ env.AWS_REGION }}
+
+    # -- Package artifacts & release ------------------------------
+    - name: Archive build artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          dist/**/*        # Node / Python wheels
+          build/**/*
+          coverage.xml
+        retention-days: 30
+
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        generate_release_notes: true
+        files: |
+          dist/**/*
+          build/**/*
