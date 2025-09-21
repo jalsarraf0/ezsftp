@@ -4,7 +4,7 @@
 #  Provision or revoke chrooted SFTP users with DRY-RUN support
 # ==============================================================
 set -Eeuo pipefail
-VERSION="1.5"
+VERSION="1.6"
 
 # ─── Colour helpers ───────────────────────────────────────────
 NC="$(tput sgr0  || true)"
