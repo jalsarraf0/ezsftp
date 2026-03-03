@@ -1,0 +1,67 @@
+name: Regression CI
+
+on:
+  pull_request:
+  push:
+    branches: ["main", "master"]
+  workflow_dispatch:
+
+concurrency:
+  group: ezsftp-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    name: Regression (${{ matrix.batch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        batch: ["static", "dry-run-flow"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shell tooling
+        if: matrix.batch == 'static'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Static regression checks
+        if: matrix.batch == 'static'
+        run: |
+          set -euo pipefail
+          bash -n ezsftp.sh
+          shellcheck ezsftp.sh
+
+      - name: Dry-run add/remove regression flow
+        if: matrix.batch == 'dry-run-flow'
+        run: |
+          set -Eeuo pipefail
+          TMP="$(mktemp -d)"
+          sudo touch "${TMP}/fstab"
+          sudo mkdir -p "${TMP}/chroot" "${TMP}/shared" "${TMP}/keys" "${TMP}/sshd"
+
+          sudo -E CHROOT_BASE="${TMP}/chroot" \
+            SHARED_DIR="${TMP}/shared" \
+            GROUP_NAME="sftpaccess-ci" \
+            KEY_DIR="${TMP}/keys" \
+            FSTAB_FILE="${TMP}/fstab" \
+            SSHD_FRAG_DIR="${TMP}/sshd" \
+            DRY_RUN=1 \
+            bash ./ezsftp.sh --non-interactive --action add --user ciuser
+
+          sudo -E CHROOT_BASE="${TMP}/chroot" \
+            SHARED_DIR="${TMP}/shared" \
+            GROUP_NAME="sftpaccess-ci" \
+            KEY_DIR="${TMP}/keys" \
+            FSTAB_FILE="${TMP}/fstab" \
+            SSHD_FRAG_DIR="${TMP}/sshd" \
+            DRY_RUN=1 \
+            bash ./ezsftp.sh --non-interactive --action remove --user ciuser

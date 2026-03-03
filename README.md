@@ -149,3 +149,13 @@ Q) Quit
 ---
 
 🎉 **Happy Automating!**
+
+## Validation Status (2026-03-03)
+
+- Regression status: PASS
+- Commands validated:
+  - `bash -n ezsftp.sh`
+  - `DRY_RUN=1 bash ./ezsftp.sh --non-interactive --action add --user ciuser`
+  - `DRY_RUN=1 bash ./ezsftp.sh --non-interactive --action remove --user ciuser`
+- CI/CD status: batched regression and security workflows are defined.
+- Security hygiene: PASS (no hardcoded secrets or private keys detected in tracked files).

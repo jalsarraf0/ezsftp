@@ -17,12 +17,12 @@ BD="$(tput bold   || true)"
 banner() { printf "\n${BD}${CY}%s${NC}\n" "─── $* ───"; }
 
 # ─── Configuration ───────────────────────────────────────────
-CHROOT_BASE="/chroot"
-SHARED_DIR="/shared"
-GROUP_NAME="sftpaccess"
-KEY_DIR="/root/created_keys"
-FSTAB_FILE="/etc/fstab"
-SSHD_FRAG_DIR="/etc/ssh/sshd_config.d"
+CHROOT_BASE="${CHROOT_BASE:-/chroot}"
+SHARED_DIR="${SHARED_DIR:-/shared}"
+GROUP_NAME="${GROUP_NAME:-sftpaccess}"
+KEY_DIR="${KEY_DIR:-/root/created_keys}"
+FSTAB_FILE="${FSTAB_FILE:-/etc/fstab}"
+SSHD_FRAG_DIR="${SSHD_FRAG_DIR:-/etc/ssh/sshd_config.d}"
 
 # ─── Usage / man page ────────────────────────────────────────
 usage() {
@@ -31,7 +31,7 @@ ${BD}NAME${NC}
     manage_sftp_chroot_user — provision or revoke chrooted SFTP users
 
 ${BD}SYNOPSIS${NC}
-    ${BD}manage_sftp_chroot_user.sh${NC} [-h] [-n]
+    ${BD}manage_sftp_chroot_user.sh${NC} [-h] [-n] [--non-interactive --action add|remove --user <name>]
 
 ${BD}DESCRIPTION${NC}
     Adds or removes users that are jailed to /chroot/<user> for SFTP-only
@@ -40,8 +40,11 @@ ${BD}DESCRIPTION${NC}
     sshd.  All actions are idempotent.
 
 ${BD}OPTIONS${NC}
-    -h, --help      Show this help and exit.
-    -n, --dry-run   Start in DRY-RUN mode (preview only, no changes).
+    -h, --help             Show help and exit.
+    -n, --dry-run          Start in DRY-RUN mode (preview only, no changes).
+    --non-interactive      Disable menu and execute one action.
+    --action add|remove    Action to execute in non-interactive mode.
+    --user <username>      Username for non-interactive add/remove action.
 
 ${BD}MENU SHORTCUTS${NC}
       1   Add user         (live/dry depending on mode)
@@ -51,20 +54,65 @@ ${BD}MENU SHORTCUTS${NC}
       Q   Quit
 
 ${BD}ENVIRONMENT${NC}
-    DRY_RUN=1       Same effect as --dry-run flag.
+    DRY_RUN=1             Same effect as --dry-run flag.
+    CHROOT_BASE=...       Override chroot base path.
+    SHARED_DIR=...        Override shared directory path.
+    GROUP_NAME=...        Override managed access group.
+    KEY_DIR=...           Override generated SSH key output directory.
+    FSTAB_FILE=...        Override fstab target file.
+    SSHD_FRAG_DIR=...     Override sshd fragment output directory.
 
 EOF
 }
 
 # ─── Parse CLI flags ─────────────────────────────────────────
 DRY=${DRY_RUN:-0}
+NON_INTERACTIVE=0
+ACTION=""
+TARGET_USER=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -h|--help) usage; exit 0 ;;
     -n|--dry-run) DRY=1; shift ;;
+    --non-interactive) NON_INTERACTIVE=1; shift ;;
+    --action)
+      [[ $# -ge 2 ]] || { printf 'Missing value for --action\n' >&2; usage; exit 1; }
+      ACTION="$2"
+      shift 2
+      ;;
+    --user)
+      [[ $# -ge 2 ]] || { printf 'Missing value for --user\n' >&2; usage; exit 1; }
+      TARGET_USER="$2"
+      shift 2
+      ;;
     *) printf 'Unknown option: %s\n' "$1" >&2; usage; exit 1 ;;
   esac
 done
+
+validate_username() {
+  local candidate="$1"
+  [[ "$candidate" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || {
+    printf "Invalid username: %s\n" "$candidate" >&2
+    exit 1
+  }
+}
+
+if [[ "$NON_INTERACTIVE" == "1" ]]; then
+  case "$ACTION" in
+    add|remove) ;;
+    *)
+      printf "Non-interactive mode requires --action add|remove\n" >&2
+      usage
+      exit 1
+      ;;
+  esac
+  [[ -n "$TARGET_USER" ]] || {
+    printf "Non-interactive mode requires --user <username>\n" >&2
+    usage
+    exit 1
+  }
+  validate_username "$TARGET_USER"
+fi
 
 # ─── Dry-run wrapper ─────────────────────────────────────────
 run() {
@@ -77,7 +125,8 @@ run() {
 
 # ─── Pre-flight ──────────────────────────────────────────────
 [[ $EUID -eq 0 ]] || { echo "❌  Must run as root." >&2; exit 1; }
-mkdir -p "$KEY_DIR"
+mkdir -p "$KEY_DIR" "$SSHD_FRAG_DIR" "$SHARED_DIR" "$CHROOT_BASE"
+touch "$FSTAB_FILE"
 
 # ─── add_user() ──────────────────────────────────────────────
 add_user() {
@@ -172,6 +221,14 @@ remove_user() {
 
 # ─── Interactive menu ─────────────────────────────────────────
 while true; do
+  if [[ "$NON_INTERACTIVE" == "1" ]]; then
+    case "$ACTION" in
+      add) add_user "$TARGET_USER" ;;
+      remove) remove_user "$TARGET_USER" ;;
+    esac
+    exit 0
+  fi
+
   MODE_TXT="${BD}MODE:${NC} $( [[ $DRY == 1 ]] && printf "${YE}DRY-RUN${NC}" || printf "${GR}LIVE${NC}" )"
   banner "Chroot-SFTP User Manager v${VERSION} — ${MODE_TXT}"
   printf "%s\n" \
