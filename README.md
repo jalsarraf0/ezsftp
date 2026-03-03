@@ -157,5 +157,5 @@ Q) Quit
   - `bash -n ezsftp.sh`
   - `DRY_RUN=1 bash ./ezsftp.sh --non-interactive --action add --user ciuser`
   - `DRY_RUN=1 bash ./ezsftp.sh --non-interactive --action remove --user ciuser`
-- CI/CD status: batched regression and security workflows are defined.
+- CI/CD status: all tests passed on `main` (`Regression CI` run `22643207499`, `Security CI` run `22643207493`, `Regression and Security` run `22643207490`).
 - Security hygiene: PASS (no hardcoded secrets or private keys detected in tracked files).
