@@ -11,7 +11,6 @@ NC="$(tput sgr0  || true)"
 CY="$(tput setaf 6 || true)"   # cyan
 GR="$(tput setaf 2 || true)"   # green
 YE="$(tput setaf 3 || true)"   # yellow
-RD="$(tput setaf 1 || true)"   # red
 BD="$(tput bold   || true)"
 
 banner() { printf "\n${BD}${CY}%s${NC}\n" "─── $* ───"; }
@@ -117,7 +116,7 @@ fi
 # ─── Dry-run wrapper ─────────────────────────────────────────
 run() {
   if [[ "$DRY" == "1" ]]; then
-    printf "${YE}DRY-RUN${NC} ${CY}➜${NC} %s\n" "$*"
+    printf "%b %b %s\n" "${YE}DRY-RUN${NC}" "${CY}➜${NC}" "$*"
   else
     "$@"
   fi
@@ -198,10 +197,16 @@ remove_user() {
   local PPK="${SHARED_DIR}/${U}.ppk"
   local FRAG="${SSHD_FRAG_DIR}/${U}.conf"
 
-  id -u "$U" &>/dev/null && run gpasswd -d "$U" "$GROUP_NAME" || true
+  if id -u "$U" &>/dev/null; then
+    run gpasswd -d "$U" "$GROUP_NAME" || true
+  fi
 
   # unmount
-  for T in "$CH" "$CS"; do mountpoint -q "$T" && run umount "$T" || true; done
+  for T in "$CH" "$CS"; do
+    if mountpoint -q "$T"; then
+      run umount "$T" || true
+    fi
+  done
 
   # fstab cleanup
   run sed -i "\|${HR}.*${CH}|d"       "$FSTAB_FILE"
@@ -214,7 +219,9 @@ remove_user() {
   # keys & directories
   run rm -f "${KF}" "${KF}.pub" "${PPK}"
   run rm -rf "$CR" "$HR"
-  id -u "$U" &>/dev/null && run userdel "$U" || true
+  if id -u "$U" &>/dev/null; then
+    run userdel "$U" || true
+  fi
 
   printf "${GR}✓${NC} User '%s' removed.%s\n" "$U" "${DRY:+  (dry-run only)}"
 }
@@ -229,7 +236,12 @@ while true; do
     exit 0
   fi
 
-  MODE_TXT="${BD}MODE:${NC} $( [[ $DRY == 1 ]] && printf "${YE}DRY-RUN${NC}" || printf "${GR}LIVE${NC}" )"
+  if [[ $DRY == 1 ]]; then
+    MODE_STATE="${YE}DRY-RUN${NC}"
+  else
+    MODE_STATE="${GR}LIVE${NC}"
+  fi
+  MODE_TXT="${BD}MODE:${NC} ${MODE_STATE}"
   banner "Chroot-SFTP User Manager v${VERSION} — ${MODE_TXT}"
   printf "%s\n" \
          "${BD}1${NC}) Add user" \
