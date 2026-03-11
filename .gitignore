@@ -1,0 +1,14 @@
+# ezsftp — local gitignore
+# Global secrets coverage: ~/.config/git/ignore
+
+# Runtime / test artifacts
+*.log
+*.tmp
+/tmp/
+
+# Shell history and editor state
+.history
+.bash_history
+.vscode/
+.idea/
+.DS_Store

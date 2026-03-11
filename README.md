@@ -1,4 +1,7 @@
 
+[![Regression CI](https://github.com/jalsarraf0/ezsftp/actions/workflows/ci.yml/badge.svg)](https://github.com/jalsarraf0/ezsftp/actions/workflows/ci.yml)
+[![Security CI](https://github.com/jalsarraf0/ezsftp/actions/workflows/security.yml/badge.svg)](https://github.com/jalsarraf0/ezsftp/actions/workflows/security.yml)
+
 # 📦 Chroot-SFTP User Manager v1.5
 
 Provision and manage **chrooted SFTP-only users** with ease. This script supports **DRY-RUN** mode for safely previewing changes and automates all required configurations:

@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   regression-and-security:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, docker]
     steps:
       - name: Checkout
         continue-on-error: true
