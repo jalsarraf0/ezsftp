@@ -208,9 +208,14 @@ remove_user() {
     fi
   done
 
-  # fstab cleanup
-  run sed -i "\|${HR}.*${CH}|d"       "$FSTAB_FILE"
-  run sed -i "\|${SHARED_DIR}.*${CS}|d" "$FSTAB_FILE"
+  # fstab cleanup — use grep -F (fixed-string) to avoid regex issues with path chars
+  if [[ "$DRY" == "1" ]]; then
+    printf "%b %b %s\n" "${YE}DRY-RUN${NC}" "${CY}➜${NC}" "grep -Fv '${HR}' '${FSTAB_FILE}' > '${FSTAB_FILE}.tmp' && mv '${FSTAB_FILE}.tmp' '${FSTAB_FILE}'"
+    printf "%b %b %s\n" "${YE}DRY-RUN${NC}" "${CY}➜${NC}" "grep -Fv '${SHARED_DIR}' '${FSTAB_FILE}' > '${FSTAB_FILE}.tmp' && mv '${FSTAB_FILE}.tmp' '${FSTAB_FILE}'"
+  else
+    grep -Fv "${HR}" "${FSTAB_FILE}" > "${FSTAB_FILE}.tmp" && mv "${FSTAB_FILE}.tmp" "${FSTAB_FILE}"
+    grep -Fv "${SHARED_DIR}" "${FSTAB_FILE}" > "${FSTAB_FILE}.tmp" && mv "${FSTAB_FILE}.tmp" "${FSTAB_FILE}"
+  fi
   run systemctl daemon-reload
 
   # sshd fragment
