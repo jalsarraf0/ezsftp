@@ -39,4 +39,14 @@ jobs:
 
       - name: Dry-run add/remove regression flow
         if: matrix.batch == 'dry-run-flow'
-        run: bash .github/scripts/docker-runner.sh debian:bookworm-slim "TMP=\$$(mktemp -d) && touch \$${TMP}/fstab && mkdir -p \$${TMP}/chroot \$${TMP}/shared \$${TMP}/keys \$${TMP}/sshd && CHROOT_BASE=\$${TMP}/chroot SHARED_DIR=\$${TMP}/shared GROUP_NAME=sftpaccess-ci KEY_DIR=\$${TMP}/keys FSTAB_FILE=\$${TMP}/fstab SSHD_FRAG_DIR=\$${TMP}/sshd DRY_RUN=1 bash ./ezsftp.sh --non-interactive --action add --user ciuser && CHROOT_BASE=\$${TMP}/chroot SHARED_DIR=\$${TMP}/shared GROUP_NAME=sftpaccess-ci KEY_DIR=\$${TMP}/keys FSTAB_FILE=\$${TMP}/fstab SSHD_FRAG_DIR=\$${TMP}/sshd DRY_RUN=1 bash ./ezsftp.sh --non-interactive --action remove --user ciuser"
+        run: |
+          set -Eeuo pipefail
+          TMP=$(mktemp -d)
+          touch "${TMP}/fstab"
+          mkdir -p "${TMP}/chroot" "${TMP}/shared" "${TMP}/keys" "${TMP}/sshd"
+          CHROOT_BASE="${TMP}/chroot" SHARED_DIR="${TMP}/shared" GROUP_NAME=sftpaccess-ci \
+            KEY_DIR="${TMP}/keys" FSTAB_FILE="${TMP}/fstab" SSHD_FRAG_DIR="${TMP}/sshd" \
+            DRY_RUN=1 bash ./ezsftp.sh --non-interactive --action add --user ciuser
+          CHROOT_BASE="${TMP}/chroot" SHARED_DIR="${TMP}/shared" GROUP_NAME=sftpaccess-ci \
+            KEY_DIR="${TMP}/keys" FSTAB_FILE="${TMP}/fstab" SSHD_FRAG_DIR="${TMP}/sshd" \
+            DRY_RUN=1 bash ./ezsftp.sh --non-interactive --action remove --user ciuser
