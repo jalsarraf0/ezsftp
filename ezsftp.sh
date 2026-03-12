@@ -123,9 +123,15 @@ run() {
 }
 
 # ─── Pre-flight ──────────────────────────────────────────────
-[[ $EUID -eq 0 ]] || { echo "❌  Must run as root." >&2; exit 1; }
-mkdir -p "$KEY_DIR" "$SSHD_FRAG_DIR" "$SHARED_DIR" "$CHROOT_BASE"
-touch "$FSTAB_FILE"
+if [[ "$DRY" != "1" && $EUID -ne 0 ]]; then
+  echo "❌  Must run as root." >&2
+  exit 1
+fi
+
+if [[ "$DRY" != "1" ]]; then
+  mkdir -p "$KEY_DIR" "$SSHD_FRAG_DIR" "$SHARED_DIR" "$CHROOT_BASE"
+  touch "$FSTAB_FILE"
+fi
 
 # ─── add_user() ──────────────────────────────────────────────
 add_user() {
@@ -254,10 +260,21 @@ while true; do
          "${BD}3${NC}) Toggle dry-run" \
          "${BD}4${NC}) Help / man page" \
          "${BD}Q${NC}) Quit"
-  read -rp "Select: " choice
+  if ! read -rp "Select: " choice; then
+    printf "\nNo interactive input available. Exiting.\n" >&2
+    exit 0
+  fi
   case "${choice^^}" in
-    1) read -rp "Username to ADD: " u && [[ $u ]] && add_user "$u" ;;
-    2) read -rp "Username to REMOVE: " u && [[ $u ]] && remove_user "$u" ;;
+    1)
+       if read -rp "Username to ADD: " u && [[ $u ]]; then
+         add_user "$u"
+       fi
+       ;;
+    2)
+       if read -rp "Username to REMOVE: " u && [[ $u ]]; then
+         remove_user "$u"
+       fi
+       ;;
     3)
        if [[ $DRY == 1 ]]; then DRY=0; echo -e "${GR}▶ LIVE mode enabled.${NC}"
        else                       DRY=1; echo -e "${YE}▶ DRY-RUN mode enabled.${NC}"; fi

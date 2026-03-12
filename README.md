@@ -2,7 +2,7 @@
 [![Regression CI](https://github.com/jalsarraf0/ezsftp/actions/workflows/ci.yml/badge.svg)](https://github.com/jalsarraf0/ezsftp/actions/workflows/ci.yml)
 [![Security CI](https://github.com/jalsarraf0/ezsftp/actions/workflows/security.yml/badge.svg)](https://github.com/jalsarraf0/ezsftp/actions/workflows/security.yml)
 
-# 📦 Chroot-SFTP User Manager v1.5
+# 📦 Chroot-SFTP User Manager v1.6
 
 Provision and manage **chrooted SFTP-only users** with ease. This script supports **DRY-RUN** mode for safely previewing changes and automates all required configurations:
 
@@ -32,6 +32,8 @@ Provision and manage **chrooted SFTP-only users** with ease. This script support
 ./ezsftp.sh [OPTIONS]
 ```
 
+Live changes require root. `--dry-run` can be executed without root to preview behavior safely.
+
 ### Options
 
 | Option            | Description             |
@@ -50,7 +52,7 @@ export DRY_RUN=1
 ## 📚 Interactive Menu
 
 ```
-─── Chroot-SFTP User Manager v1.5 — MODE: [LIVE/DRY-RUN] ───
+─── Chroot-SFTP User Manager v1.6 — MODE: [LIVE/DRY-RUN] ───
 1) Add user
 2) Remove user
 3) Toggle dry-run
@@ -81,7 +83,7 @@ Q) Quit
 
 ## 📅 Changelog
 
-- **v1.5**
+- **v1.6**
   - ✅ Enhanced DRY-RUN mode with clear and colorized output.  
   - ✅ Automated PuTTY `.ppk` key generation for Windows users.  
   - ✅ Improved SSHD configuration management using per-user fragments.  
@@ -144,7 +146,8 @@ Q) Quit
 
 ## 📢 Final Notes
 
-- Ensure this script is run with **root privileges**.
+- Run live provisioning/removal with **root privileges**.
+- Use `--dry-run` first; it can be run safely without root.
 - Compatible with modern Linux distributions using OpenSSH.
 - Tested on Fedora 41/42 and RHEL-based systems.
 - DRY-RUN is highly recommended before applying changes to production environments.
