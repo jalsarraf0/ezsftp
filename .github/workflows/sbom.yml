@@ -1,0 +1,89 @@
+name: SBOM Generation
+
+on:
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "30 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ezsftp-sbom-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    name: Generate SBOM
+    runs-on: [self-hosted, Linux, X64, docker]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          set -euo pipefail
+
+          SCRIPT="ezsftp.sh"
+          VERSION=$(grep -oP '^VERSION="\K[^"]+' "$SCRIPT" || echo "unknown")
+          SHA=$(sha256sum "$SCRIPT" | awk '{print $1}')
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          cat > sbom.cdx.json <<EOFSBOM
+          {
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.5",
+            "serialNumber": "urn:uuid:$(cat /proc/sys/kernel/random/uuid)",
+            "version": 1,
+            "metadata": {
+              "timestamp": "${TIMESTAMP}",
+              "tools": [
+                {
+                  "vendor": "ezsftp-ci",
+                  "name": "shell-sbom-generator",
+                  "version": "1.0.0"
+                }
+              ],
+              "component": {
+                "type": "application",
+                "name": "ezsftp",
+                "version": "${VERSION}",
+                "description": "Chroot-SFTP user provisioning tool",
+                "licenses": [
+                  {
+                    "license": {
+                      "id": "MIT"
+                    }
+                  }
+                ]
+              }
+            },
+            "components": [
+              {
+                "type": "file",
+                "name": "ezsftp.sh",
+                "version": "${VERSION}",
+                "hashes": [
+                  {
+                    "alg": "SHA-256",
+                    "content": "${SHA}"
+                  }
+                ],
+                "scope": "required"
+              }
+            ]
+          }
+          EOFSBOM
+
+          echo "--- SBOM generated ---"
+          cat sbom.cdx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+          retention-days: 90
