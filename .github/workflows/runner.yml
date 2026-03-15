@@ -10,6 +10,10 @@ on:
   schedule:
     - cron: '0 2 * * *'         # nightly at 02:00 UTC
 
+permissions:
+  contents: write
+  packages: write
+
 # Abort in-flight duplicate runs on the same ref
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
