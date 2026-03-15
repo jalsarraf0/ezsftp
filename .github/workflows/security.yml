@@ -18,7 +18,7 @@ permissions:
 jobs:
   security-batches:
     name: Security (${{ matrix.batch }})
-    runs-on: [self-hosted, Linux, X64, docker]
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -56,7 +56,7 @@ jobs:
 
   codeql:
     name: CodeQL (actions)
-    runs-on: [self-hosted, Linux, X64, docker]
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
