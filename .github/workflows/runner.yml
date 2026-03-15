@@ -22,7 +22,7 @@ concurrency:
 jobs:
   build-test-deploy:
     name: Build ▸ Test ▸ (Publish) ▸ (Deploy)
-    runs-on: ubuntu-latest       # resolves to Ubuntu 24.04 May 2025+
+    runs-on: [self-hosted, gentoo]
     env:
       AWS_REGION: us-east-1      # adjust as needed
     steps:

@@ -17,7 +17,7 @@ permissions:
 jobs:
   sbom:
     name: Generate SBOM
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, gentoo]
 
     steps:
       - name: Checkout
